@@ -16,11 +16,26 @@ class local_quizwebhook_observer {
         $roles = get_user_roles($context, $user->id, true);
         $role_names = array_map(function($r) { return $r->shortname; }, $roles);
 
-        // Get grade
-        $grade = $DB->get_record('quiz_grades', [
-            'quiz' => $quiz->id,
-            'userid' => $user->id
-        ]);
+        // Get all questions
+        $slots = $DB->get_records('quiz_slots', ['quizid' => $quiz->id]);
+        $total_questions = count($slots);
+
+        // Count correct answers
+        $correct_count = 0;
+        foreach ($slots as $slot) {
+            $qa = $DB->get_record('question_usages', ['id' => $attempt->uniqueid]);
+            $question_attempt = $DB->get_record('question_attempts', [
+                'questionusageid' => $qa->id,
+                'slot' => $slot->slot
+            ]);
+
+            if ($question_attempt && $question_attempt->fraction == 1.0) {
+                $correct_count++;
+            }
+        }
+
+        // Calculate grade based on correct answers out of total questions
+        $calculated_grade = $total_questions > 0 ? round(($correct_count / $total_questions) * 100, 2) : null;
 
         $payload = [
             'user' => [
@@ -44,13 +59,16 @@ class local_quizwebhook_observer {
                 'state' => $attempt->state,
                 'sumgrades' => $attempt->sumgrades,
                 'timefinish' => $attempt->timefinish,
-                'graded_score' => $grade ? $grade->grade : null,
+                'correct_answers' => $correct_count,
+                'total_questions' => $total_questions,
+                'grade_percentage' => $calculated_grade,
             ],
         ];
 
         $json = json_encode($payload);
 
-        $url = 'https://webhook.site/bc78109f-5e2f-4938-a808-8e8e42594ac1';
+        // Send to external webhook
+        $url = 'http://13.251.18.154:3000/moodle/quiz/webhook';
 
         $options = [
             'http' => [
