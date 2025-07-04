@@ -67,8 +67,13 @@ class local_quizwebhook_observer {
 
         $json = json_encode($payload);
 
-        // Send to external webhook
-        $url = 'http://13.251.18.154:3000/moodle/quiz/webhook';
+        $url = get_config('local_quizwebhook', 'webhookurl');
+
+        if (empty($url)) {
+            // No webhook URL set, so skip sending
+            return;
+        }
+
 
         $options = [
             'http' => [
