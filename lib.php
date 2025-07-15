@@ -2,7 +2,7 @@
 
 class local_quizwebhook_observer {
 
-    // Existing observer for quiz submission
+    // observer for quiz submission
     public static function attempt_submitted(\mod_quiz\event\attempt_submitted $event) {
         global $DB;
 
@@ -67,7 +67,7 @@ class local_quizwebhook_observer {
 
     }
 
-    // 🆕 New observer: when a course module is created
+    // observer for course module is created
     public static function course_module_created(\core\event\course_module_created $event) {
         global $DB;
 
@@ -83,11 +83,29 @@ class local_quizwebhook_observer {
         $modinfo = get_fast_modinfo($course);
         $cm = $modinfo->get_cm($cmid);
 
+        // Get enrolled users
+        $enrolled_users = []; 
+        $user_records = get_enrolled_users($context);
+        foreach ($user_records as $user) {
+            $enrolled_users[] = [
+                'id' => $user->id,
+                'username' => $user->username,
+                'fullname' => fullname($user),
+                'email' => $user->email,
+            ];
+        }
+
+        // Get updated course name (if available)
+        $updated_course_name = $course->fullname;
+        if (property_exists($course, 'displayname') && !empty($course->displayname)) {
+            $updated_course_name = $course->displayname;
+        }
+
         $payload = [
             'event' => 'course_module_created',
             'course' => [
                 'id' => $course->id,
-                'fullname' => $course->fullname,
+                'fullname' => $updated_course_name,
                 'shortname' => $course->shortname,
             ],
             'module' => [
@@ -95,6 +113,7 @@ class local_quizwebhook_observer {
                 'name' => $cm->name,
                 'modname' => $cm->modname,
             ],
+            'enrolled_users' => $enrolled_users,
             'timestamp' => time(),
         ];
 
@@ -103,7 +122,7 @@ class local_quizwebhook_observer {
     }
 
 
-    // 🔁 Shared webhook sending method
+    // webhook sending method
     private static function send_webhook($payload, $url) {
         if (empty($url)) {
             return;
