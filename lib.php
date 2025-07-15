@@ -1,6 +1,8 @@
 <?php
 
 class local_quizwebhook_observer {
+
+    // Existing observer for quiz submission
     public static function attempt_submitted(\mod_quiz\event\attempt_submitted $event) {
         global $DB;
 
@@ -11,16 +13,13 @@ class local_quizwebhook_observer {
         $user = $DB->get_record('user', ['id' => $attempt->userid]);
         $course = $DB->get_record('course', ['id' => $quiz->course]);
 
-        // Get user's roles
         $context = \context_course::instance($course->id);
         $roles = get_user_roles($context, $user->id, true);
-        $role_names = array_map(function($r) { return $r->shortname; }, $roles);
+        $role_names = array_map(fn($r) => $r->shortname, $roles);
 
-        // Get all questions
         $slots = $DB->get_records('quiz_slots', ['quizid' => $quiz->id]);
         $total_questions = count($slots);
 
-        // Count correct answers
         $correct_count = 0;
         foreach ($slots as $slot) {
             $qa = $DB->get_record('question_usages', ['id' => $attempt->uniqueid]);
@@ -28,13 +27,11 @@ class local_quizwebhook_observer {
                 'questionusageid' => $qa->id,
                 'slot' => $slot->slot
             ]);
-
             if ($question_attempt && $question_attempt->fraction == 1.0) {
                 $correct_count++;
             }
         }
 
-        // Calculate grade based on correct answers out of total questions
         $calculated_grade = $total_questions > 0 ? round(($correct_count / $total_questions) * 100, 2) : null;
 
         $payload = [
@@ -65,15 +62,52 @@ class local_quizwebhook_observer {
             ],
         ];
 
-        $json = json_encode($payload);
+        self::send_webhook($payload, get_config('local_quizwebhook', 'webhookurl'));
 
-        $url = get_config('local_quizwebhook', 'webhookurl');
+    }
 
+    // 🆕 New observer: when a course module is created
+    public static function course_module_created(\core\event\course_module_created $event) {
+        global $DB;
+
+        $data = $event->get_data();
+        $cmid = $data['objectid'];
+        $courseid = $data['courseid'];
+
+        // Get course information
+        $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+        
+        // Get module information
+        $context = \context_course::instance($courseid);
+        $modinfo = get_fast_modinfo($course);
+        $cm = $modinfo->get_cm($cmid);
+
+        $payload = [
+            'event' => 'course_module_created',
+            'course' => [
+                'id' => $course->id,
+                'fullname' => $course->fullname,
+                'shortname' => $course->shortname,
+            ],
+            'module' => [
+                'id' => $cm->id,
+                'name' => $cm->name,
+                'modname' => $cm->modname,
+            ],
+            'timestamp' => time(),
+        ];
+
+        self::send_webhook($payload, 'https://webhook.site/a050c842-f6e1-470c-9a78-925f3d5f3f89');
+    }
+
+
+    // 🔁 Shared webhook sending method
+    private static function send_webhook($payload, $url) {
         if (empty($url)) {
-            // No webhook URL set, so skip sending
             return;
         }
 
+        $json = json_encode($payload);
 
         $options = [
             'http' => [
