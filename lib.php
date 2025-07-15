@@ -62,7 +62,8 @@ class local_quizwebhook_observer {
             ],
         ];
 
-        self::send_webhook($payload, get_config('local_quizwebhook', 'webhookurl'));
+        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/moodle/quiz/webhook';
+        self::send_webhook($payload, $webhook_url);
 
     }
 
@@ -97,7 +98,8 @@ class local_quizwebhook_observer {
             'timestamp' => time(),
         ];
 
-        self::send_webhook($payload, 'https://webhook.site/a050c842-f6e1-470c-9a78-925f3d5f3f89');
+        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/moodle/lms/announce';
+        self::send_webhook($payload, $webhook_url);
     }
 
 
