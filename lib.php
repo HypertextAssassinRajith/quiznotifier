@@ -62,7 +62,7 @@ class local_quizwebhook_observer {
             ],
         ];
 
-        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/moodle/quiz/webhook';
+        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/quiz-submit';
         self::send_webhook($payload, $webhook_url);
 
     }
@@ -83,17 +83,17 @@ class local_quizwebhook_observer {
         $modinfo = get_fast_modinfo($course);
         $cm = $modinfo->get_cm($cmid);
 
-        // Get enrolled users
-        $enrolled_users = []; 
-        $user_records = get_enrolled_users($context);
-        foreach ($user_records as $user) {
-            $enrolled_users[] = [
-                'id' => $user->id,
-                'username' => $user->username,
-                'fullname' => fullname($user),
-                'email' => $user->email,
-            ];
-        }
+        // // Get enrolled users
+        // $enrolled_users = []; 
+        // $user_records = get_enrolled_users($context);
+        // foreach ($user_records as $user) {
+        //     $enrolled_users[] = [
+        //         'id' => $user->id,
+        //         'username' => $user->username,
+        //         'fullname' => fullname($user),
+        //         'email' => $user->email,
+        //     ];
+        // }
 
         // Get updated course name (if available)
         $updated_course_name = $course->fullname;
@@ -113,11 +113,11 @@ class local_quizwebhook_observer {
                 'name' => $cm->name,
                 'modname' => $cm->modname,
             ],
-            'enrolled_users' => $enrolled_users,
+            // 'enrolled_users' => $enrolled_users,
             'timestamp' => time(),
         ];
 
-        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/moodle/lms/announce';
+        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/course-update';
         self::send_webhook($payload, $webhook_url);
     }
 
