@@ -122,6 +122,26 @@ class local_quizwebhook_observer {
     }
 
     public static function course_created(\core\event\course_created $event) {
+
+        // Get course image
+        $imageurl = '';
+        if (function_exists('get_course_overviewfiles')) {
+            $files = get_course_overviewfiles($course);
+            foreach ($files as $file) {
+                $mimetype = $file->get_mimetype();
+                if (strpos($mimetype, 'image/') === 0) {
+                    $imageurl = file_encode_url(\moodle_url::make_pluginfile_url(
+                        $file->get_contextid(),
+                        $file->get_component(),
+                        $file->get_filearea(),
+                        $file->get_itemid(),
+                        $file->get_filepath(),
+                        $file->get_filename()
+                    ));
+                    break;
+                }
+            }
+        }
         global $DB;
 
         $data = $event->get_data();
@@ -153,6 +173,7 @@ class local_quizwebhook_observer {
                 'shortname' => $course->shortname,
                 'subcategory' => $subcategory_name,
                 'parentcategory' => $parentcategory_name,
+                'imageurl' => $imageurl,
                 'startdate' => $course->startdate,
                 'enddate' => $course->enddate,
             ],
