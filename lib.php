@@ -121,6 +121,30 @@ class local_quizwebhook_observer {
         self::send_webhook($payload, $webhook_url);
     }
 
+    public static function course_created(\core\event\course_created $event) {
+        global $DB;
+
+        $data = $event->get_data();
+        $courseid = $data['objectid'];
+        $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+
+        $payload = [
+            'event' => 'course_created',
+            'course' => [
+                'id' => $course->id,
+                'fullname' => $course->fullname,
+                'shortname' => $course->shortname,
+                'category' => $course->category,
+                'startdate' => $course->startdate,
+                'enddate' => $course->enddate,
+            ],
+            'timestamp' => time(),
+        ];
+
+        $webhook_url = rtrim(get_config('local_quizwebhook', 'webhookurl'), '/') . '/course-create';
+        self::send_webhook($payload, $webhook_url);
+    }
+
 
     // webhook sending method
     private static function send_webhook($payload, $url) {

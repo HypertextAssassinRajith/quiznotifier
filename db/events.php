@@ -18,4 +18,12 @@ $observers = [
         'internal'    => false,
         'priority'    => 1000,
     ],
+
+    [
+        'eventname'   => '\core\event\course_created',
+        'callback'    => 'local_quizwebhook_observer::course_created',
+        'includefile' => '/local/quizwebhook/lib.php',
+        'internal'    => false,
+        'priority'    => 1000,
+    ],
 ];
