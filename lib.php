@@ -128,13 +128,31 @@ class local_quizwebhook_observer {
         $courseid = $data['objectid'];
         $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 
+
+        // Get subcategory and parent category names
+        $subcategory_name = '';
+        $parentcategory_name = '';
+        if (!empty($course->category)) {
+            $subcategory = $DB->get_record('course_categories', ['id' => $course->category]);
+            if ($subcategory) {
+                $subcategory_name = $subcategory->name;
+                if (!empty($subcategory->parent) && $subcategory->parent != 0) {
+                    $parentcategory = $DB->get_record('course_categories', ['id' => $subcategory->parent]);
+                    if ($parentcategory) {
+                        $parentcategory_name = $parentcategory->name;
+                    }
+                }
+            }
+        }
+
         $payload = [
             'event' => 'course_created',
             'course' => [
                 'id' => $course->id,
                 'fullname' => $course->fullname,
                 'shortname' => $course->shortname,
-                'category' => $course->category,
+                'subcategory' => $subcategory_name,
+                'parentcategory' => $parentcategory_name,
                 'startdate' => $course->startdate,
                 'enddate' => $course->enddate,
             ],
